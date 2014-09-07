@@ -8,7 +8,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Set;
 
@@ -20,21 +19,16 @@ public class SolveSokoban implements Serializable {
 
 	public static final File mapFile = new File("map.txt");
 
-	private SokobanMap orginalMap;
 	private SokobanMap map;
 
 	private Set<SokobanMap> duplicateCheck = new HashSet<SokobanMap>();
-	private LinkedList<Direction> trace = new LinkedList<Direction>();
-	private Set<SokobanMap> traceSet = new HashSet<SokobanMap>();
+	private LinkedList<MapNode> processList = new LinkedList<MapNode>();
 	private LinkedList<Direction> succTrace = null;
-	private Set<SokobanMap> succSet = new HashSet<SokobanMap>();
-	private LinkedList<Solution> solutions = new LinkedList<Solution>();
-	private LinkedList<Direction> bestTrace = null;
 
 	public static void main(String[] args) throws Exception {
 		SolveSokoban solve = new SolveSokoban();
-		SokobanMap mem = (SokobanMap) solve.orginalMap.clone();
-		System.out.println(mem.toString());
+		SokobanMap tem = (SokobanMap) solve.map.clone();
+		System.out.println(tem.toString());
 		solve.solve();
 		LinkedList<Direction> directions = solve.getBestSuccTrace();
 		if (directions == null) {
@@ -46,8 +40,8 @@ public class SolveSokoban implements Serializable {
 			for (Direction d : directions) {
 				System.out.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
 				System.out.println("step " + (++i) + "/" + directions.size());
-				mem.move(d);
-				System.out.println(mem.toString());
+				tem.move(d);
+				System.out.println(tem.toString());
 				Thread.sleep(500);
 			}
 			System.out.println("finished!");
@@ -56,7 +50,7 @@ public class SolveSokoban implements Serializable {
 	}
 
 	public LinkedList<Direction> getBestSuccTrace() {
-		return bestTrace;
+		return succTrace;
 	}
 
 	public SolveSokoban() {
@@ -68,97 +62,57 @@ public class SolveSokoban implements Serializable {
 	}
 
 	public void solve() throws Exception {
-		solve(false);
-		System.out.println(solutions.size());
-		for (Solution solution : solutions) {
-			System.out.println(solution.succSet.size());
-			this.map = (SokobanMap) this.orginalMap.clone();
-			this.duplicateCheck.clear();
-			this.trace.clear();
-			this.traceSet.clear();
-			this.succTrace = null;
-			this.succSet = solution.succSet;
-			solve(true);
-			System.out.println(succTrace.size());
-			if (bestTrace == null || bestTrace.size() > succTrace.size()) {
-				bestTrace = new LinkedList<Direction>();
-				bestTrace.addAll(succTrace);
+		processList.add(new MapNode(null, new LinkedList<Direction>(), this.map));
+		MapNode node = null;
+		while ((node = processList.poll()) != null) {
+			// System.out.println(node.getMap());
+			if (solve(node)) {
+				break;
 			}
 		}
+		processList.clear();
 	}
 
-	private void solve(boolean optimize) throws Exception {
-		// System.out.println("trace size:" + trace.size());
-		// System.out.println("solve:\n" + this.map.toString());
-		// Thread.sleep(1000);
+	private boolean solve(MapNode node) throws Exception {
 
-		if (optimize) {
-			if (traceSet.contains(map) || duplicateCheck.contains(map) && !succSet.contains(map)) {
-				// System.out.println("- contains!");
-				return;
-			}
-		} else {
-			if (duplicateCheck.contains(map)) {
-				return;
-			}
+		SokobanMap map = node.getMap();
+
+		if (duplicateCheck.contains(map)) {
+			return false;
 		}
-		// if (succTrace != null && trace.size() >= succTrace.size() - 1) {
-		// System.out.println("- too long!");
-		// return;
-		// }
 		if (map.success()) {
-			if (optimize) {
-				if (succTrace == null || trace.size() < succTrace.size()) {
-					succSet.clear();
-					succSet.addAll(traceSet);
-					succTrace = new LinkedList<Direction>();
-					succTrace.addAll(trace);
-					// System.out.println("- success!\n\n###############\n\nsuccess!!");
-					// Thread.sleep(500);
-				}
-			} else {
-				Solution solution = new Solution();
-				solution.lastDirection = trace.getLast();
-				solution.succMap = (SokobanMap) map.clone();
-				solution.succSet = new HashSet<SokobanMap>();
-
-				boolean add = true;
-				Iterator<Solution> it = solutions.iterator();
-				while (it.hasNext()) {
-					Solution s = it.next();
-					if (s.equals(solution)) {
-						if (s.succSet.size() <= solution.succSet.size()) {
-							add = false;
-						} else {
-							it.remove();
-						}
-						break;
-					}
-				}
-				if (add) {
-					solution.succSet.addAll(traceSet);
-					solutions.add(solution);
-				}
-			}
-			return;
+			succTrace = backFindDirections(node);
+			return true;
 		}
 
-		SokobanMap mem = (SokobanMap) map.clone();
-		traceSet.add(mem);
-		duplicateCheck.add(mem);
-		LinkedList<LinkedList<Direction>> bestPaths = map.spreadBestPaths();
-		for (LinkedList<Direction> bestPath : bestPaths) {
-			for (Direction d : bestPath) {
-				map.move(d);
-				trace.addLast(d);
+		if (node.getDirectionChange().size() > 0) {
+			node.moveForward();
+			processList.add(node);
+		} else {
+			duplicateCheck.add(map);
+			SokobanMap tem = (SokobanMap) map.clone();
+			LinkedList<LinkedList<Direction>> bestPaths = tem.spreadBestPaths();
+
+			for (LinkedList<Direction> bestPath : bestPaths) {
+				MapNode next = new MapNode(node, bestPath, map);
+				next.moveForward();
+				processList.add(next);
 			}
-			solve(optimize);
-			for (int i = 0; i < bestPath.size(); i++) {
-				trace.removeLast();
-			}
-			map = (SokobanMap) mem.clone();
 		}
-		traceSet.remove(mem);
+		return false;
+	}
+
+	private LinkedList<Direction> backFindDirections(MapNode node) {
+		LinkedList<Direction> directions = new LinkedList<Direction>();
+		directions.addAll(node.getBestPath());
+		while ((node = node.getPreNode()) != null) {
+			LinkedList<Direction> subDirections = node.getBestPath();
+			Direction d;
+			while ((d = subDirections.pollLast()) != null) {
+				directions.addFirst(d);
+			}
+		}
+		return directions;
 	}
 
 	private void createMapFile() throws IOException {
@@ -180,8 +134,7 @@ public class SolveSokoban implements Serializable {
 
 	private void initMap() throws CloneNotSupportedException {
 		String str = readDataFromFile();
-		orginalMap = SokobanMap.restoreFromStr(str);
-		map = (SokobanMap) orginalMap.clone();
+		map = SokobanMap.restoreFromStr(str);
 	}
 
 	private String readDataFromFile() {
@@ -224,6 +177,15 @@ public class SolveSokoban implements Serializable {
 		SokobanMap succMap;
 		Direction lastDirection;
 		Set<SokobanMap> succSet;
+
+		public Solution() {
+		}
+
+		public Solution(SokobanMap succMap, Direction lastDirection, Set<SokobanMap> succSet) {
+			this.succMap = succMap;
+			this.lastDirection = lastDirection;
+			this.succSet = succSet;
+		}
 
 		@Override
 		public int hashCode() {
