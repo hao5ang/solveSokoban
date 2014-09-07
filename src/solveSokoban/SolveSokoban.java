@@ -172,42 +172,4 @@ public class SolveSokoban implements Serializable {
 			throw new RuntimeException(e);
 		}
 	}
-
-	static class Solution {
-		SokobanMap succMap;
-		Direction lastDirection;
-		Set<SokobanMap> succSet;
-
-		public Solution() {
-		}
-
-		public Solution(SokobanMap succMap, Direction lastDirection, Set<SokobanMap> succSet) {
-			this.succMap = succMap;
-			this.lastDirection = lastDirection;
-			this.succSet = succSet;
-		}
-
-		@Override
-		public int hashCode() {
-			return succMap.hashCode() * 10 + lastDirection.ordinal();
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (obj == null) {
-				return false;
-			}
-			if (obj == this) {
-				return true;
-			}
-			if (obj instanceof Solution) {
-				Solution temSolution = (Solution) obj;
-				if (temSolution.succMap == null) {
-					return temSolution.succMap == this.succMap && temSolution.lastDirection == this.lastDirection;
-				}
-				return temSolution.succMap.equals(this.succMap) && temSolution.lastDirection == this.lastDirection;
-			}
-			return false;
-		}
-	}
 }
