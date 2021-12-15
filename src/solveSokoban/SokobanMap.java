@@ -39,7 +39,8 @@ public class SokobanMap implements Cloneable, Serializable {
 			for (int j = 0; j < sokobanMap[i].length; j++) {
 				if (sokobanMap[i][j] == SokobanMap.MAN_CHAR || sokobanMap[i][j] == SokobanMap.MAN_AIM_CHAR) {
 					this.manPosition = new Position(i, j);
-				} else if (sokobanMap[i][j] == SokobanMap.AIM_CHAR || sokobanMap[i][j] == SokobanMap.BOX_AIM_CHAR) {
+				}
+				if (sokobanMap[i][j] == SokobanMap.AIM_CHAR || sokobanMap[i][j] == SokobanMap.BOX_AIM_CHAR || sokobanMap[i][j] == SokobanMap.MAN_AIM_CHAR) {
 					aims.add(new Position(i, j));
 				}
 			}

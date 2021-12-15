@@ -29,7 +29,9 @@ public class SolveSokoban implements Serializable {
 		SolveSokoban solve = new SolveSokoban();
 		SokobanMap tem = (SokobanMap) solve.map.clone();
 		System.out.println(tem.toString());
+		long start = System.currentTimeMillis();
 		solve.solve();
+		System.out.println(System.currentTimeMillis() - start);
 		LinkedList<Direction> directions = solve.getBestSuccTrace();
 		if (directions == null) {
 			System.out.println("\n\nThere is no solutioin for this map!!! ");
@@ -65,7 +67,6 @@ public class SolveSokoban implements Serializable {
 		processList.add(new MapNode(null, new LinkedList<Direction>(), this.map));
 		MapNode node = null;
 		while ((node = processList.poll()) != null) {
-			// System.out.println(node.getMap());
 			if (solve(node)) {
 				break;
 			}
